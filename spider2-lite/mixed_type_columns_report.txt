@@ -1,0 +1,346 @@
+MIXED TYPE COLUMNS REPORT
+================================================================================
+
+File: AdventureWorks.json
+--------------------------------------------------------------------------------
+
+  Table: product
+    Column: productmodelid
+      Types: empty_string, int
+    Column: productsubcategoryid
+      Types: empty_string, int
+    Column: weight
+      Types: empty_string, float
+
+  Table: salesorderheader
+    Column: creditcardid
+      Types: empty_string, int
+    Column: currencyrateid
+      Types: empty_string, int
+    Column: salespersonid
+      Types: empty_string, int
+
+  Table: salesperson
+    Column: salesquota
+      Types: empty_string, int
+    Column: territoryid
+      Types: empty_string, int
+
+File: Baseball.json
+--------------------------------------------------------------------------------
+
+  Table: all_star
+    Column: gp
+      Types: empty_string, int
+    Column: starting_pos
+      Types: empty_string, int
+
+  Table: appearances
+    Column: g_all
+      Types: empty_string, int
+    Column: g_defense
+      Types: empty_string, int
+    Column: g_dh
+      Types: empty_string, int
+    Column: g_ph
+      Types: empty_string, int
+    Column: g_pr
+      Types: empty_string, int
+    Column: gs
+      Types: empty_string, int
+
+  Table: batting_postseason
+    Column: cs
+      Types: empty_string, int
+    Column: g_idp
+      Types: empty_string, int
+    Column: hbp
+      Types: empty_string, int
+    Column: ibb
+      Types: empty_string, int
+    Column: sf
+      Types: empty_string, int
+    Column: sh
+      Types: empty_string, int
+
+  Table: fielding
+    Column: a
+      Types: empty_string, int
+    Column: cs
+      Types: empty_string, int
+    Column: dp
+      Types: empty_string, int
+    Column: e
+      Types: empty_string, int
+    Column: gs
+      Types: empty_string, int
+    Column: inn_outs
+      Types: empty_string, int
+    Column: pb
+      Types: empty_string, int
+    Column: po
+      Types: empty_string, int
+    Column: sb
+      Types: empty_string, int
+    Column: wp
+      Types: empty_string, int
+    Column: zr
+      Types: empty_string, int
+
+  Table: fielding_outfield
+    Column: gcf
+      Types: empty_string, int
+    Column: glf
+      Types: empty_string, int
+    Column: grf
+      Types: empty_string, int
+
+  Table: fielding_postseason
+    Column: cs
+      Types: empty_string, int
+    Column: gs
+      Types: empty_string, int
+    Column: inn_outs
+      Types: empty_string, int
+    Column: pb
+      Types: empty_string, int
+    Column: sb
+      Types: empty_string, int
+
+  Table: hall_of_fame
+    Column: ballots
+      Types: empty_string, int
+    Column: needed
+      Types: empty_string, int
+    Column: votes
+      Types: empty_string, int
+
+  Table: manager
+    Column: rank
+      Types: empty_string, int
+
+  Table: pitching
+    Column: baopp
+      Types: empty_string, float, int
+    Column: bfp
+      Types: empty_string, int
+    Column: era
+      Types: empty_string, float, int
+    Column: g_idp
+      Types: empty_string, int
+    Column: gf
+      Types: empty_string, int
+    Column: hbp
+      Types: empty_string, int
+    Column: ibb
+      Types: empty_string, int
+    Column: ipouts
+      Types: empty_string, int
+    Column: sf
+      Types: empty_string, int
+    Column: sh
+      Types: empty_string, int
+    Column: wp
+      Types: empty_string, int
+
+  Table: pitching_postseason
+    Column: bfp
+      Types: empty_string, int
+    Column: bk
+      Types: empty_string, int
+    Column: era
+      Types: empty_string, float, int, string
+    Column: g_idp
+      Types: empty_string, int
+    Column: hbp
+      Types: empty_string, int
+    Column: ibb
+      Types: empty_string, int
+    Column: sf
+      Types: empty_string, int
+    Column: sh
+      Types: empty_string, int
+    Column: wp
+      Types: empty_string, int
+
+  Table: player
+    Column: birth_day
+      Types: empty_string, int
+    Column: birth_month
+      Types: empty_string, int
+    Column: birth_year
+      Types: empty_string, int
+    Column: death_day
+      Types: empty_string, int
+    Column: death_month
+      Types: empty_string, int
+    Column: death_year
+      Types: empty_string, int
+    Column: height
+      Types: empty_string, int
+    Column: weight
+      Types: empty_string, int
+
+  Table: player_award_vote
+    Column: points_won
+      Types: float, int
+    Column: votes_first
+      Types: empty_string, float, int
+
+  Table: team
+    Column: attendance
+      Types: empty_string, int
+    Column: cs
+      Types: empty_string, int
+    Column: dp
+      Types: empty_string, int
+    Column: era
+      Types: float, int
+    Column: ghome
+      Types: empty_string, int
+    Column: hbp
+      Types: empty_string, int
+    Column: sb
+      Types: empty_string, int
+    Column: sf
+      Types: empty_string, int
+    Column: so
+      Types: empty_string, int
+
+File: EU_soccer.json
+--------------------------------------------------------------------------------
+
+  Table: Match
+    Column: B365A
+      Types: float, int, null
+    Column: B365D
+      Types: float, int, null
+    Column: B365H
+      Types: float, int, null
+    Column: BSA
+      Types: float, int, null
+    Column: BSD
+      Types: float, int, null
+    Column: BSH
+      Types: float, int, null
+    Column: BWA
+      Types: float, int, null
+    Column: BWD
+      Types: float, int, null
+    Column: BWH
+      Types: float, int, null
+    Column: GBA
+      Types: float, int, null
+    Column: GBD
+      Types: float, int, null
+    Column: GBH
+      Types: float, int, null
+    Column: IWA
+      Types: float, int, null
+    Column: IWD
+      Types: float, int, null
+    Column: IWH
+      Types: float, int, null
+    Column: LBA
+      Types: float, int, null
+    Column: LBD
+      Types: float, int, null
+    Column: LBH
+      Types: float, int, null
+    Column: PSA
+      Types: float, int, null
+    Column: PSD
+      Types: float, int, null
+    Column: PSH
+      Types: float, int, null
+    Column: SJA
+      Types: float, int, null
+    Column: SJD
+      Types: float, int, null
+    Column: SJH
+      Types: float, int, null
+    Column: VCA
+      Types: float, int, null
+    Column: VCD
+      Types: float, int, null
+    Column: VCH
+      Types: float, int, null
+    Column: WHA
+      Types: float, int, null
+    Column: WHD
+      Types: float, int, null
+    Column: WHH
+      Types: float, int, null
+
+File: Pagila.json
+--------------------------------------------------------------------------------
+
+  Table: payment
+    Column: amount
+      Types: float, int
+
+File: delivery_center.json
+--------------------------------------------------------------------------------
+
+  Table: orders
+    Column: order_amount
+      Types: float, int
+    Column: order_delivery_cost
+      Types: float, int, null
+    Column: order_delivery_fee
+      Types: float, int
+    Column: order_metric_collected_time
+      Types: float, int, null
+    Column: order_metric_cycle_time
+      Types: float, int, null
+    Column: order_metric_expediton_speed_time
+      Types: float, int, null
+    Column: order_metric_paused_time
+      Types: float, int, null
+    Column: order_metric_production_time
+      Types: float, int, null
+    Column: order_metric_transit_time
+      Types: float, int, null
+    Column: order_metric_walking_time
+      Types: float, int, null
+
+  Table: payments
+    Column: payment_amount
+      Types: float, int
+    Column: payment_fee
+      Types: float, int, null
+
+  Table: stores
+    Column: store_plan_price
+      Types: float, int, null
+
+File: sqlite-sakila.json
+--------------------------------------------------------------------------------
+
+  Table: payment
+    Column: amount
+      Types: float, int
+
+File: stacking.json
+--------------------------------------------------------------------------------
+
+  Table: feature_importance
+    Column: importance
+      Types: float, int
+
+  Table: model_importance
+    Column: importance
+      Types: float, int
+
+  Table: model_score
+    Column: test_score
+      Types: float, int
+    Column: train_score
+      Types: float, int
+
+
+================================================================================
+SUMMARY
+================================================================================
+Total files with issues: 7
+Total files analyzed: 30
