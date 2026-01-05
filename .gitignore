@@ -28,7 +28,7 @@ methods/spider-agent-snow/examples/*
 !methods/spider-agent-snow/logs/README.md
 !methods/spider-agent-snow/output/README.md
 
-spider2-lite/evaluation_suite/*
+
 spider2-lite/fix_rows.py
 spider2-lite/query_local.py
 
@@ -38,18 +38,6 @@ spider2-lite/spider2-lite.json
 spider2-lite/resource/databases/local/*.db
 spider2-lite/resource/databases/local/*.sqlite
 
-!spider2-lite/evaluation_suite/README.md
-!spider2-lite/evaluation_suite/gold/
-!spider2-lite/evaluation_suite/gold-1108/
-!spider2-lite/evaluation_suite/gold-1104/
-!spider2-lite/evaluation_suite/gold/sql/bq001.sql
-!spider2-lite/evaluation_suite/gold/sql/bq002.sql
-!spider2-lite/evaluation_suite/gold/spider2lite_eval.jsonl
-!spider2-lite/evaluation_suite/evaluate.py
-!spider2-lite/evaluation_suite/evaluate_yx.py
-!spider2-lite/evaluation_suite/evaluate_utils.py
-!spider2-lite/evaluation_suite/spider2sql_eval_config_file.py
-!spider2-lite/evaluation_suite/example_submission_folder/
 
 
 # Do not ignore specific files and directories

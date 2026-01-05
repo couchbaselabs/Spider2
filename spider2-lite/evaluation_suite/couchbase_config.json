@@ -1,0 +1,22 @@
+{
+  "_comment": "Couchbase IQ Spider2-Lite Evaluation Configuration",
+  "couchbase": {
+    "connection_string": "couchbase://localhost",
+    "username": "Administrator",
+    "password": "password",
+    "query_endpoint": "http://localhost:8093/query/service"
+  },
+  "couchbase_iq": {
+    "_comment": "Get these from your Capella account",
+    "natural_cred": "soham.sarkar@couchbase.com:Piku@2411Piku",
+    "natural_orgid": "7a99d00c-f55b-4b39-bc72-1b4cc68ba894"
+  },
+  "evaluation": {
+    "_comment": "Set max_questions to 2 for testing, null for all 547 questions",
+    "max_questions": 2,
+    "save_sql": true,
+    "execute_sql": true,
+    "delay_between_requests": 0.5
+  }
+}
+
