@@ -90,14 +90,28 @@ class CouchbaseIQAPI:
         Returns:
             Generated SQL query string
         """
-        # Combine question with evidence if provided
         print(f"================================================= SS ================================================")
-        full_question = question
+        
+        # Build the WITH clause parameters
+        with_params = {
+            "keyspaces": keyspaces,
+            "execute": False
+        }
+        
+        # Add external_knowledge_context if evidence is provided
         if evidence:
-            full_question = f"Dear AI, here is a hint for you to generate the best SQL++ query to answer the question: {evidence}. Here is the question I need the SQL++ query for: {question}"
-        print(f"SS:  Full Question: {full_question}")
+            with_params["external_knowledge_context"] = evidence
+        
+        # Build the statement with the WITH clause
+        with_clause_json = json.dumps(with_params)
+        statement = f"USING AI WITH {with_clause_json} {question}"
+        
+        print(f"SS:  Question: {question}")
+        print(f"SS:  External Knowledge: {evidence}")
+        print(f"SS:  Statement: {statement}")
+        
         payload = {
-            "statement": f"USING AI WITH {{\"keyspaces\":{json.dumps(keyspaces)}, \"execute\":false}} {full_question}",
+            "statement": statement,
             "natural_cred": self.natural_cred,
             "natural_orgid": self.natural_orgid
         }

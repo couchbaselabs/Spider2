@@ -38,6 +38,30 @@ The complete evaluation system consists of four main parts:
 - Evaluate: Compare outputs against SQLite-based gold results
 - Focus: Only evaluate "local" test cases (SQLite-compatible)
 
+### Benchmark File Filtering
+
+The original `spider2-lite.jsonl` contains 548 test cases across multiple database types:
+- `local*` - SQLite-based (135 instances) ✅ **Kept**
+- `bq*` - BigQuery (removed)
+- `sf_bq*` - Snowflake/BigQuery (removed)
+- `sf*` - Snowflake (removed)
+- `ga*` - Google Analytics (removed)
+
+**The benchmark file has been filtered to contain only the 135 `local*` instances**, as these are the SQLite-based test cases that can be migrated to Couchbase for IQ evaluation.
+
+To re-filter if needed:
+```bash
+python3 -c "
+import json
+with open('spider2-lite.jsonl', 'r') as f:
+    lines = f.readlines()
+filtered = [l.strip() for l in lines if l.strip() and json.loads(l.strip()).get('instance_id', '').startswith('local')]
+with open('spider2-lite.jsonl', 'w') as f:
+    f.write('\n'.join(filtered) + '\n')
+print(f'Kept {len(filtered)} local instances')
+"
+```
+
 ### Directory Structure
 
 ```
@@ -613,6 +637,88 @@ average_payment_per_order,customer_lifespan_weeks,customer_unique_id,number_of_o
 | API initialization failed | Couchbase not running | Start Couchbase Server |
 | No SQL generated | Auth issues | Verify Capella credentials |
 | SQL execution failed | Missing data | Check bucket/collections exist |
+
+### Single Question Test: `test_single_question.py`
+
+**Location**: `evaluation_suite/test_single_question.py`
+
+**Purpose**: Test a specific question by instance ID with full control over options
+
+**When to Use**:
+- ✅ Testing individual questions from the benchmark
+- ✅ Debugging specific failing cases
+- ✅ Comparing results with/without external knowledge
+
+**Usage**:
+```bash
+cd /Users/soham.sarkar/Documents/evaluations/Spider2/spider2-lite/evaluation_suite
+
+# Test with external knowledge (if available for the question)
+python test_single_question.py local004
+
+# Test WITHOUT external knowledge
+python test_single_question.py local004 --no-external-knowledge
+
+# Add a custom prompt/hint to the external knowledge
+python test_single_question.py local008 --prompt "Return only the top 5 results"
+
+# Combine: skip external knowledge but add custom prompt
+python test_single_question.py local008 --no-external-knowledge -p "Use LIMIT clause for top results"
+```
+
+**Command Line Arguments**:
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `instance_id` | Yes | The instance ID to test (e.g., `local004`) |
+| `--no-external-knowledge` | No | Skip sending external knowledge from the file to the SQL generator |
+| `--prompt`, `-p` | No | Additional prompt/hint to add to external knowledge (e.g., `"Use window functions"`) |
+
+**Process**:
+1. Loads the specific question from `spider2-lite.jsonl`
+2. Loads configuration from `couchbase_config.json`
+3. Initializes Couchbase IQ API
+4. Retrieves keyspaces for the question's database
+5. Optionally loads external knowledge (unless `--no-external-knowledge` is set)
+6. Generates SQL using Couchbase IQ
+7. Executes SQL and saves results to `local_results/{db_name}/{instance_id}.csv`
+
+**Example Output**:
+```
+================================================================================
+Testing Single Question: local004
+================================================================================
+
+Step 1: Loading question...
+✓ Question loaded
+  Instance ID: local004
+  Database: E_commerce
+  Question: Could you tell me the number of orders...
+
+Step 2: Loading configuration...
+✓ Configuration loaded
+
+Step 3: Initializing CouchbaseIQ API...
+✓ API initialized successfully
+
+Step 4: Loading keyspaces for E_commerce...
+✓ Loaded 9 keyspaces
+
+Step 5: Generating SQL...
+✓ SQL generated successfully
+
+Step 6: Executing SQL...
+✓ SQL executed successfully
+  Rows returned: 3
+
+Step 7: Saving results to CSV...
+✓ Results saved to: local_results/E_commerce/local004.csv
+```
+
+**Notes**:
+- The `--no-external-knowledge` flag is useful for testing how well the model performs without additional context
+- Some questions (like `local002`) require ML/regression models that SQL cannot handle natively - these will fail regardless of hints
+- Results are saved to `local_results/{database_name}/{instance_id}.csv`
 
 ### Full Evaluation: `couchbase_iq_spider2_evaluator.py`
 
@@ -1839,9 +1945,16 @@ FROM E_commerce.spider2.order_payments;
 
 ## Document Version
 
-- **Version**: 2.1
-- **Last Updated**: December 2024
+- **Version**: 2.3
+- **Last Updated**: January 2026
 - **Author**: Spider2-Lite Evaluation Team
+- **Changes in 2.3**:
+  - Added documentation for `test_single_question.py` script
+  - Documented `--no-external-knowledge` flag for testing without external knowledge
+  - Added `--prompt` / `-p` flag to provide custom hints to the SQL generator
+- **Changes in 2.2**:
+  - Documented benchmark file filtering (spider2-lite.jsonl now contains only 135 local instances)
+  - Added re-filtering command for reference
 - **Changes in 2.1**: 
   - Clarified JSON format: `{table_name: [rows]}` is the primary format
   - Updated import process to explicitly create scope before importing

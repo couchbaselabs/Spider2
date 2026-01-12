@@ -4,6 +4,7 @@ Test a single question from spider2-lite.jsonl
 Run SQL generation, execution, and save results to CSV
 """
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -62,10 +63,14 @@ def get_keyspaces_for_db(database_name):
     return keyspaces
 
 
-def test_single_question(instance_id):
+def test_single_question(instance_id, skip_external_knowledge=False, extra_prompt=None):
     """Test a single question by instance_id"""
     print("=" * 80)
     print(f"Testing Single Question: {instance_id}")
+    if skip_external_knowledge:
+        print("(External knowledge DISABLED)")
+    if extra_prompt:
+        print(f"(Extra prompt: {extra_prompt[:50]}{'...' if len(extra_prompt) > 50 else ''})")
     print("=" * 80)
     print()
     
@@ -146,10 +151,10 @@ def test_single_question(instance_id):
         print(f"  ... and {len(keyspaces) - 5} more")
     print()
     
-    # Load external knowledge if available
+    # Load external knowledge if available (unless skipped)
     external_knowledge_content = None
     external_knowledge_file = question_data.get('external_knowledge')
-    if external_knowledge_file:
+    if external_knowledge_file and not skip_external_knowledge:
         print(f"Step 5: Loading external knowledge: {external_knowledge_file}")
         external_knowledge_content = load_external_knowledge(external_knowledge_file)
         if external_knowledge_content:
@@ -158,6 +163,10 @@ def test_single_question(instance_id):
         else:
             print(f"⚠ Could not load external knowledge")
         print()
+    elif external_knowledge_file and skip_external_knowledge:
+        print(f"Step 5: Skipping external knowledge (--no-external-knowledge flag)")
+        print(f"  Would have loaded: {external_knowledge_file}")
+        print()
     
     # Generate SQL
     step_num = 6 if external_knowledge_file else 5
@@ -165,7 +174,22 @@ def test_single_question(instance_id):
     print(f"  Question: {question_data['question']}")
     print()
 
-    external_knowledge_content = external_knowledge_content+"Use window functions to answer complicated calculation questions." if external_knowledge_content else None
+    # Build final external knowledge content
+    hints = []
+    
+    # Add existing external knowledge if loaded
+    if external_knowledge_content:
+        hints.append(external_knowledge_content)
+    
+    # Always add window function hint
+    hints.append("Use window functions to answer complicated calculation questions.")
+    
+    # Add extra prompt from command line if provided (and not empty)
+    if extra_prompt and extra_prompt.strip():
+        hints.append(extra_prompt.strip())
+        print(f"  Extra prompt added: {extra_prompt.strip()}")
+    
+    external_knowledge_content = " ".join(hints)
     
     try:
         generated_sql = couchbase_iq.generate_sql(
@@ -260,17 +284,34 @@ def test_single_question(instance_id):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python test_single_question.py <instance_id>")
-        print()
-        print("Example:")
-        print("  python test_single_question.py local_001")
-        print()
-        print("To see available instance IDs, check spider2-lite.jsonl")
-        sys.exit(1)
+    parser = argparse.ArgumentParser(
+        description="Test a single question from spider2-lite.jsonl"
+    )
+    parser.add_argument(
+        "instance_id",
+        help="The instance ID to test (e.g., local_001)"
+    )
+    parser.add_argument(
+        "--no-external-knowledge",
+        action="store_true",
+        help="Skip sending external knowledge to the SQL generator"
+    )
+    parser.add_argument(
+        "--prompt", "-p",
+        type=str,
+        nargs='?',
+        const='',
+        default=None,
+        help="Additional prompt/hint to add to external knowledge (e.g., 'Use window functions')"
+    )
     
-    instance_id = sys.argv[1]
-    success = test_single_question(instance_id)
+    args = parser.parse_args()
+    
+    success = test_single_question(
+        instance_id=args.instance_id,
+        skip_external_knowledge=args.no_external_knowledge,
+        extra_prompt=args.prompt
+    )
     
     if not success:
         print()
