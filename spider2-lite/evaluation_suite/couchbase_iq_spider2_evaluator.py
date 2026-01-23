@@ -121,7 +121,7 @@ class CouchbaseIQAPI:
             "Authorization": requests.auth._basic_auth_str(self.couchbase_user, self.couchbase_pass)
         }
         
-        print(f"SS:  Payload: {payload}")
+        # print(f"SS:  Payload: {payload}")
         print(f"SS:  Headers: {headers}")
         print(f"SS:  Query Endpoint: {self.query_endpoint}")
         try:

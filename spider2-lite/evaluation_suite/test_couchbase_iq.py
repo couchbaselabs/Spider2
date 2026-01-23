@@ -4,9 +4,36 @@ Process all local questions from spider2-lite.jsonl
 Run SQL generation, execution, and save results to CSV
 """
 
+import argparse
 import json
 from pathlib import Path
 from couchbase_iq_spider2_evaluator import CouchbaseIQAPI, load_config, exec_sql, json_to_csv
+
+
+def parse_args():
+    """Parse command line arguments"""
+    parser = argparse.ArgumentParser(
+        description="Process local questions from spider2-lite.jsonl"
+    )
+    parser.add_argument(
+        "--limit", "-n",
+        type=int,
+        default=None,
+        help="Maximum number of questions to process (default: all)"
+    )
+    parser.add_argument(
+        "--offset", "-o",
+        type=int,
+        default=0,
+        help="Number of questions to skip before processing (default: 0)"
+    )
+    parser.add_argument(
+        "--db",
+        type=str,
+        default=None,
+        help="Only process questions from a specific database"
+    )
+    return parser.parse_args()
 
 def load_questions():
     """Load questions from spider2-lite.jsonl"""
@@ -59,10 +86,20 @@ def get_keyspaces_for_db(database_name):
     return keyspaces
 
 
-def process_questions():
-    """Process all questions with local instance_id"""
+def process_questions(limit=None, offset=0, db_filter=None):
+    """Process all questions with local instance_id
+    
+    Args:
+        limit: Maximum number of questions to process (None = all)
+        offset: Number of questions to skip before processing
+        db_filter: Only process questions from this database
+    """
     print("=" * 80)
     print("Processing Local Questions from spider2-lite.jsonl")
+    if limit:
+        print(f"  Limit: {limit} questions, Offset: {offset}")
+    if db_filter:
+        print(f"  Database filter: {db_filter}")
     print("=" * 80)
     print()
     
@@ -118,6 +155,21 @@ def process_questions():
     
     print(f"✓ Loaded {len(all_questions)} total questions")
     print(f"✓ Found {len(local_questions)} questions with 'local' instance_id")
+    
+    # Apply database filter if specified
+    if db_filter:
+        local_questions = [q for q in local_questions if q.get('db') == db_filter]
+        print(f"✓ Filtered to {len(local_questions)} questions for database '{db_filter}'")
+    
+    # Apply offset and limit
+    total_available = len(local_questions)
+    if offset > 0:
+        local_questions = local_questions[offset:]
+        print(f"✓ Skipped first {offset} questions")
+    
+    if limit is not None and limit > 0:
+        local_questions = local_questions[:limit]
+        print(f"✓ Limited to {len(local_questions)} questions (of {total_available} total)")
     
     if not local_questions:
         print("No matching questions found!")
@@ -283,7 +335,12 @@ def process_questions():
 
 
 def main():
-    success = process_questions()
+    args = parse_args()
+    success = process_questions(
+        limit=args.limit,
+        offset=args.offset,
+        db_filter=args.db
+    )
     
     print()
     if success:

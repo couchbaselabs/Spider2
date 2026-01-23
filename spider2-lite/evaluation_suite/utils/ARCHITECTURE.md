@@ -108,6 +108,7 @@ Spider2/spider2-lite/
         ├── cleanup_non_local_results.sh
         ├── get_all_keyspaces.py
         ├── find_mixed_type_columns.py      # Analyze JSON files for mixed type columns
+        ├── check_empty_tables.sh           # Find & remove empty tables in SQLite DBs
         └── ARCHITECTURE.md (this file)
     │
     └── baselines/codes/utils/              # Additional utility scripts
@@ -506,18 +507,61 @@ This phase uses Couchbase IQ to generate SQL++ queries from natural language que
 
 **Location**: `evaluation_suite/test_couchbase_iq.py`
 
-**Purpose**: Validates API connectivity and tests single question
+**Purpose**: Validates API connectivity and processes questions from spider2-lite.jsonl
 
 **When to Use**:
 - ✅ After initial setup (verify everything works)
 - ✅ Before full evaluation (quick smoke test)
 - ✅ When troubleshooting (isolate issues)
 - ✅ Testing configuration changes
+- ✅ Running a subset of questions for faster iteration
 
 **Usage**:
 ```bash
 cd /Users/soham.sarkar/Documents/evaluations/Spider2/spider2-lite/evaluation_suite
+
+# Run all questions (default behavior)
 python test_couchbase_iq.py
+
+# Run only 10 questions
+python test_couchbase_iq.py --limit 10
+# Or using short form
+python test_couchbase_iq.py -n 10
+
+# Skip first 20 questions and run the next 10
+python test_couchbase_iq.py --limit 10 --offset 20
+# Or using short form
+python test_couchbase_iq.py -n 10 -o 20
+
+# Run only questions from a specific database
+python test_couchbase_iq.py --db Brazilian_E_Commerce
+
+# Combine all options: run 5 questions from IPL database, starting from the 3rd
+python test_couchbase_iq.py -n 5 -o 2 --db IPL
+```
+
+**Command Line Arguments**:
+
+| Argument | Short | Default | Description |
+|----------|-------|---------|-------------|
+| `--limit` | `-n` | None (all) | Maximum number of questions to process |
+| `--offset` | `-o` | 0 | Number of questions to skip before processing |
+| `--db` | - | None (all) | Only process questions from a specific database |
+
+**Examples**:
+
+```bash
+# Process first 10 questions
+python test_couchbase_iq.py -n 10
+
+# Process questions 11-20 (skip first 10, take next 10)
+python test_couchbase_iq.py -n 10 -o 10
+
+# Process all E_commerce questions
+python test_couchbase_iq.py --db E_commerce
+
+# Process first 5 Baseball questions
+python test_couchbase_iq.py -n 5 --db Baseball
 ```
 
 **5-Step Process**:
@@ -762,15 +806,15 @@ iq_results/
 └── ... (up to 150 CSV files)
 ```
 
-**Differences from Test Script**:
+**Differences from Full Evaluator**:
 
 | Aspect | test_couchbase_iq.py | couchbase_iq_spider2_evaluator.py |
 |--------|---------------------|----------------------------------|
-| Questions | 1 (hardcoded) | 150 (from JSONL) |
-| Purpose | Quick validation | Full benchmark |
-| Output | test_results.csv | iq_results/*.csv |
-| Runtime | ~10 seconds | ~30-60 minutes |
-| Use case | Setup verification | Production evaluation |
+| Questions | Configurable (--limit, --offset, --db) | All 150 (from JSONL) |
+| Purpose | Quick validation, subset testing | Full benchmark |
+| Output | local_results/{db}/*.csv | iq_results/*.csv |
+| Runtime | Varies (based on limit) | ~30-60 minutes |
+| Use case | Setup verification, iterative testing | Production evaluation |
 
 ---
 
@@ -983,6 +1027,84 @@ This file contains evaluation settings for each instance:
 ---
 
 ## Part IV: Utility Tools
+
+### Results Collector: `collect_results.py`
+
+**Location**: `evaluation_suite/collect_results.py`
+
+**Purpose**: Collects all CSV files from subdirectories in `local_results/` and copies them to a flat `final_results/` folder for evaluation.
+
+**Why Needed**: 
+
+When running tests with `test_couchbase_iq.py` or `test_single_question.py`, results are saved in database-specific subdirectories under `local_results/` (e.g., `local_results/Brazilian_E_Commerce/local028.csv`). However, the `evaluate.py` script expects all CSV files in a single flat directory. This script bridges that gap.
+
+**Usage**:
+```bash
+cd /Users/soham.sarkar/Documents/evaluations/Spider2/spider2-lite/evaluation_suite
+python3 collect_results.py
+```
+
+**Process**:
+1. Scans all subdirectories in `local_results/`
+2. Finds all `.csv` files in each subdirectory
+3. Copies them to `final_results/` (flat structure)
+4. Warns about any duplicate filenames
+5. Reports total files copied
+
+**Example Output**:
+```
+Copied: Brazilian_E_Commerce/local028.csv -> final_results/local028.csv
+Copied: Brazilian_E_Commerce/local029.csv -> final_results/local029.csv
+Copied: E_commerce/local003.csv -> final_results/local003.csv
+Copied: E_commerce/local004.csv -> final_results/local004.csv
+...
+
+✅ Done! Copied 22 CSV files to /path/to/evaluation_suite/final_results
+```
+
+**Directory Structure**:
+
+Before:
+```
+local_results/
+├── Brazilian_E_Commerce/
+│   ├── local028.csv
+│   ├── local029.csv
+│   └── local037.csv
+├── E_commerce/
+│   ├── local003.csv
+│   └── local004.csv
+└── Baseball/
+    ├── local007.csv
+    └── local008.csv
+```
+
+After running `collect_results.py`:
+```
+final_results/
+├── local003.csv
+├── local004.csv
+├── local007.csv
+├── local008.csv
+├── local028.csv
+├── local029.csv
+└── local037.csv
+```
+
+**Evaluation After Collection**:
+
+After running the script, evaluate using:
+```bash
+python3 evaluate.py --mode exec_result --result_dir final_results --gold_dir gold
+```
+
+**Features**:
+- ✅ **Clean start** - Removes existing `final_results/` before copying
+- ✅ **Duplicate detection** - Warns if same filename exists in multiple subdirectories
+- ✅ **Preserves metadata** - Uses `shutil.copy2` to preserve file timestamps
+- ✅ **Progress output** - Shows each file as it's copied
+
+---
 
 ### Keyspace Explorer: `get_all_keyspaces.py`
 
@@ -1268,6 +1390,160 @@ Analysis of 30 JSON files revealed:
 
 ---
 
+### Empty Table Checker & Cleaner: `check_empty_tables.sh`
+
+**Location**: `evaluation_suite/utils/check_empty_tables.sh`
+
+**Purpose**: Scans all SQLite databases to find tables with zero rows, and optionally removes them.
+
+**Why Needed**: 
+
+Some SQLite databases contain empty tables (tables with schema but no data). When these are migrated to Couchbase as collections, they cause a critical issue:
+
+- **Couchbase cannot infer schema from empty collections** - Unlike SQLite which stores schema separately from data, Couchbase infers collection schema from the documents it contains. Empty collections have no documents, so no schema can be inferred.
+- This breaks Couchbase IQ's ability to understand the data structure and generate correct SQL++ queries
+- Queries referencing these collections will fail or produce unexpected results
+
+This script helps identify and remove empty tables **before** exporting to JSON and importing to Couchbase.
+
+**Usage**:
+
+```bash
+cd /Users/soham.sarkar/Documents/evaluations/Spider2/spider2-lite/evaluation_suite/utils
+
+# CHECK ONLY - List empty tables without removing them (default)
+./check_empty_tables.sh
+
+# CLEANUP - Remove all empty tables from databases
+./check_empty_tables.sh --cleanup
+
+# Specify a custom directory
+./check_empty_tables.sh /path/to/sqlite/databases
+./check_empty_tables.sh --cleanup /path/to/sqlite/databases
+```
+
+**Command Line Arguments**:
+
+| Argument | Default | Description |
+|----------|---------|-------------|
+| `--cleanup` | Off | When specified, drops empty tables instead of just listing them |
+| `[directory]` | `../../local_sqlite` | Path to directory containing SQLite databases |
+
+**Check Mode Output** (default):
+
+```
+Mode: CHECK ONLY (use --cleanup flag to remove empty tables)
+Scanning SQLite databases in: /path/to/local_sqlite
+
+========================================
+DATABASE: BowlingLeague.sqlite
+========================================
+  EMPTY TABLE: Bowler_Scores_Archive
+  EMPTY TABLE: Match_Games_Archive
+  EMPTY TABLE: Tournaments_Archive
+  EMPTY TABLE: Tourney_Matches_Archive
+
+========================================
+DATABASE: oracle_sql.sqlite
+========================================
+  EMPTY TABLE: conway_gen_zero
+  EMPTY TABLE: id_name_type
+  EMPTY TABLE: id_name_coll_type
+
+========================================
+Scan complete! Run with --cleanup flag to remove empty tables.
+========================================
+```
+
+**Cleanup Mode Output** (with `--cleanup`):
+
+```
+Mode: CLEANUP (will remove empty tables)
+Scanning SQLite databases in: /path/to/local_sqlite
+
+========================================
+DATABASE: BowlingLeague.sqlite
+========================================
+  Dropping empty table: Bowler_Scores_Archive
+    ✓ Removed successfully
+  Dropping empty table: Match_Games_Archive
+    ✓ Removed successfully
+  Dropping empty table: Tournaments_Archive
+    ✓ Removed successfully
+  Dropping empty table: Tourney_Matches_Archive
+    ✓ Removed successfully
+
+========================================
+DATABASE: oracle_sql.sqlite
+========================================
+  Dropping empty table: conway_gen_zero
+    ✓ Removed successfully
+  Dropping empty table: id_name_type
+    ✓ Removed successfully
+
+========================================
+Cleanup complete!
+========================================
+```
+
+**Features**:
+
+- ✅ **Two modes** - Check-only (safe) and cleanup (destructive)
+- ✅ **Auto-detection** - Automatically finds the `local_sqlite` directory relative to script location
+- ✅ **All databases** - Scans all `.sqlite` files in the target directory
+- ✅ **Clear output** - Shows which tables are empty, organized by database
+- ✅ **Safe by default** - Only removes tables when `--cleanup` flag is explicitly provided
+
+**When to Run**:
+
+| Stage | Purpose | Command |
+|-------|---------|---------|
+| **Before export** ⚠️ | Remove empty tables before JSON export (required) | `./check_empty_tables.sh --cleanup` |
+| **Data audit** | See which databases have empty tables | `./check_empty_tables.sh` |
+| **Troubleshooting** | If IQ fails to infer schema for some collections | `./check_empty_tables.sh` |
+
+**Integration with Data Pipeline**:
+
+```
+SQLite Databases (may have empty tables)
+    ↓
+[check_empty_tables.sh --cleanup] ← REQUIRED: Remove empty tables (Couchbase can't infer schema from empty collections)
+    ↓
+export_sqlite_to_json.py
+    ↓
+JSON Files (no empty table entries)
+    ↓
+find_mixed_type_columns.py --clean
+    ↓
+batch_import_to_couchbase.py
+    ↓
+Couchbase (all collections have documents, schema can be inferred)
+```
+
+**Typical Findings**:
+
+Analysis of the Spider2-lite databases revealed **14 empty tables** across **6 databases**:
+
+| Database | Empty Tables |
+|----------|--------------|
+| **BowlingLeague.sqlite** | `Bowler_Scores_Archive`, `Match_Games_Archive`, `Tournaments_Archive`, `Tourney_Matches_Archive` |
+| **log.sqlite** | `action_log_with_noise` |
+| **northwind.sqlite** | `customercustomerdemo`, `customerdemographics` |
+| **oracle_sql.sqlite** | `conway_gen_zero`, `id_name_type`, `id_name_coll_type`, `id_name_coll_entries`, `favorite_coll_type` |
+| **Pagila.sqlite** | `film_text` |
+| **sqlite-sakila.sqlite** | `film_text` |
+
+The remaining **24 databases** had no empty tables:
+- AdventureWorks.sqlite, Airlines.sqlite, bank_sales_trading.sqlite, Baseball.sqlite
+- Brazilian_E_Commerce.sqlite, California_Traffic_Collision.sqlite, chinook.sqlite
+- city_legislation.sqlite, complex_oracle.sqlite, Db-IMDB.sqlite, delivery_center.sqlite
+- E_commerce.sqlite, education_business.sqlite, electronic_sales.sqlite
+- EntertainmentAgency.sqlite, EU_soccer.sqlite, f1.sqlite, imdb_movies.sqlite
+- IPL.sqlite, modern_data.sqlite, music.sqlite, school_scheduling.sqlite
+- stacking.sqlite, WWE.sqlite
+
+---
+
 ## Complete Workflow Guide
 
 ### Prerequisites
@@ -1299,7 +1575,41 @@ Before starting, ensure you have:
 
 #### PHASE 1: One-Time Setup (Data Migration)
 
-**Step 1.0: Export SQLite to JSON**
+**Step 1.0: Remove Empty Tables from SQLite Databases**
+
+⚠️ **Required**: Couchbase cannot infer schema from empty collections. Remove empty tables before export.
+
+```bash
+cd evaluation_suite/utils
+
+# First, check which tables are empty
+./check_empty_tables.sh
+
+# Then remove them
+./check_empty_tables.sh --cleanup
+```
+
+**Expected Output**:
+```
+Mode: CLEANUP (will remove empty tables)
+Scanning SQLite databases in: /path/to/local_sqlite
+
+========================================
+DATABASE: BowlingLeague.sqlite
+========================================
+  Dropping empty table: Bowler_Scores_Archive
+    ✓ Removed successfully
+...
+========================================
+Cleanup complete!
+========================================
+```
+
+**Why required**: Empty SQLite tables become empty Couchbase collections. Couchbase IQ cannot infer schema from empty collections, which breaks SQL++ query generation.
+
+---
+
+**Step 1.1: Export SQLite to JSON**
 
 Export SQLite databases to JSON format:
 
@@ -1322,7 +1632,7 @@ Processing: E_commerce.sqlite
 
 ---
 
-**Step 1.1: Clean JSON Files (Required for Couchbase Migration)**
+**Step 1.2: Clean JSON Files (Required for Couchbase Migration)**
 
 **⚠️ IMPORTANT**: This step is **required** before importing to Couchbase. SQLite's dynamic typing allows empty strings in numeric columns, which are exported to JSON. Couchbase SQL++ enforces strict type checking. Without cleaning, SQL++ queries will fail with type errors.
 
@@ -1389,7 +1699,7 @@ python3 find_mixed_type_columns.py
 
 ---
 
-**Step 1.2: Import JSON to Couchbase**
+**Step 1.3: Import JSON to Couchbase**
 
 ```bash
 cd evaluation_suite/utils
@@ -1414,7 +1724,7 @@ Total files: 5
 
 ---
 
-**Step 1.3: Configure Credentials**
+**Step 1.4: Configure Credentials**
 
 Create `evaluation_suite/couchbase_config.json`:
 
@@ -1440,7 +1750,7 @@ Create `evaluation_suite/couchbase_config.json`:
 
 ---
 
-**Step 1.4: Clean Gold Results**
+**Step 1.5: Clean Gold Results**
 
 ```bash
 cd evaluation_suite/utils
@@ -1588,6 +1898,7 @@ SETUP (One-time, ~30 minutes)
  ☐ Install Couchbase Server
  ☐ Install Python packages
  ☐ Create Capella account
+ ☐ Remove empty tables (1 minute) ⚠️ Required - Couchbase can't infer schema from empty collections
  ☐ Export SQLite → JSON (5 minutes)
  ☐ Clean JSON files (2 minutes) ⚠️ Required for SQL++ compatibility
  ☐ Import JSON → Couchbase (10 minutes)
@@ -1623,8 +1934,12 @@ ITERATION (As needed)
 # SETUP COMMANDS
 # ========================================
 
-# Export SQLite to JSON
+# Remove empty tables from SQLite databases (required before export)
 cd evaluation_suite/utils
+./check_empty_tables.sh              # Check which tables are empty
+./check_empty_tables.sh --cleanup    # Remove empty tables
+
+# Export SQLite to JSON
 python export_sqlite_to_json.py
 
 # Clean JSON files (replace empty strings with NULL in numeric columns)
@@ -1649,9 +1964,18 @@ python3 find_mixed_type_columns.py --clean
 # TESTING COMMANDS
 # ========================================
 
-# Quick test (single question)
+# Quick test (all questions)
 cd evaluation_suite
 python test_couchbase_iq.py
+
+# Run only 10 questions
+python test_couchbase_iq.py --limit 10
+
+# Run 10 questions starting from the 21st
+python test_couchbase_iq.py -n 10 -o 20
+
+# Run questions from a specific database
+python test_couchbase_iq.py --db Brazilian_E_Commerce
 
 # Full evaluation (all 150 tests)
 python couchbase_iq_spider2_evaluator.py --mode exec_result
@@ -1660,7 +1984,14 @@ python couchbase_iq_spider2_evaluator.py --mode exec_result
 # EVALUATION COMMANDS
 # ========================================
 
-# Evaluate results
+# Collect results from local_results/ subdirectories to final_results/
+cd evaluation_suite
+python3 collect_results.py
+
+# Evaluate results (from final_results/)
+python evaluate.py --mode exec_result --result_dir final_results --gold_dir gold
+
+# Evaluate results (from iq_results/ - full evaluator output)
 python evaluate.py --mode exec_result --result_dir iq_results --gold_dir gold
 
 # View detailed log
@@ -1707,6 +2038,7 @@ EVALUATION SUITE:
     ├── test_couchbase_iq.py            ← Quick test script
     ├── couchbase_iq_spider2_evaluator.py ← Full evaluator
     ├── evaluate.py                      ← Scoring script
+    ├── collect_results.py               ← Collect CSVs for evaluation
     │
     ├── gold/                           ← Reference results
     │   ├── exec_result/                ← 150 local*.csv files
@@ -1722,6 +2054,7 @@ EVALUATION SUITE:
         ├── cleanup_non_local_results.sh
         ├── get_all_keyspaces.py
         ├── find_mixed_type_columns.py  ← Analyze & clean JSON for mixed types
+        ├── check_empty_tables.sh       ← Find & remove empty tables in SQLite DBs
         └── ARCHITECTURE.md (this file)
 ```
 
@@ -1774,18 +2107,20 @@ This evaluation suite provides a complete end-to-end pipeline for testing Couchb
 
 ### Components
 
-**7 Tools Across 3 Phases**:
+**10 Tools Across 4 Phases**:
 
 | Phase | Tool | Input | Output | Runtime |
 |-------|------|-------|--------|---------|
 | 1. Migration | export_sqlite_to_json.py | SQLite DBs | JSON files | 5 min |
 | 1. Migration | batch_import_to_couchbase.py | JSON files | Couchbase buckets | 10 min |
-| 2. Testing | test_couchbase_iq.py | 1 question | 1 CSV | 10 sec |
+| 2. Testing | test_couchbase_iq.py | N questions (configurable) | N CSVs | varies |
 | 2. Testing | couchbase_iq_spider2_evaluator.py | 150 questions | 150 CSVs | 60 min |
+|| 3. Evaluation | collect_results.py | local_results/ subdirs | final_results/ | 1 sec |
 | 3. Evaluation | cleanup_non_local_results.sh | 398 files | 150 files | 1 min |
 | 3. Evaluation | evaluate.py | Results + Gold | Score | 5 min |
 | 4. Utility | get_all_keyspaces.py | Couchbase | Keyspace list | 1 sec |
 | 4. Utility | find_mixed_type_columns.py | JSON files | Analysis/Cleaned JSON | 1-5 min |
+| 4. Utility | check_empty_tables.sh | SQLite DBs | List/Remove empty tables | 1 min |
 
 ### Key Features
 
@@ -1945,9 +2280,13 @@ FROM E_commerce.spider2.order_payments;
 
 ## Document Version
 
-- **Version**: 2.3
+- **Version**: 2.4
 - **Last Updated**: January 2026
 - **Author**: Spider2-Lite Evaluation Team
+- **Changes in 2.4**:
+  - Added documentation for `check_empty_tables.sh` utility script
+  - Script supports two modes: check-only (default) and cleanup (with `--cleanup` flag)
+  - Helps identify and remove empty tables from SQLite databases before migration
 - **Changes in 2.3**:
   - Added documentation for `test_single_question.py` script
   - Documented `--no-external-knowledge` flag for testing without external knowledge
